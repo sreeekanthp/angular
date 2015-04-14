@@ -1,0 +1,71 @@
+body{
+	min-width: 780px !important;
+}
+
+.drawerit{
+	position: absolute;
+	vertical-align:top;
+	border-right-width:0px;
+	display:block;
+	border-radius: 5px 0px 0px 5px; 
+	margin-top:12px;
+	float:left; 
+	width:30px; 
+	height:70px;
+}
+#drawerit-pane{
+	margin-left:30px;
+	width: 522px;
+	min-height:100%;
+	display: inline-block;
+	background-color: rgba(247, 247, 247, 0.9);
+	border: 1px solid #black;
+	border-left:4px solid #428BCA;
+	box-shadow: 0px 0px 5px #428BCA;
+}
+
+.toolbar{
+	margin-bottom: 0px;
+	background-color: #eeeeff;
+	padding:20px;
+	border:1px solid #ccc; 
+	border-bottom:none;
+	border-top-left-radius: 4px;
+	/*position: fixed;
+	z-index: 2;*/
+	width: 100%;
+	opacity: .99;
+}
+.main-grid thead{
+	/*position: fixed;
+	top:inherit;
+	left: inherit;z-index: 2;*/
+	border:1px solid #ccc;
+	border-bottom:3px solid #bbb !important;
+	
+}
+.main-grid thead th{
+	border: 1px solid #eee !important;
+	border-right: 0px solid #eee !important;
+	border-left: 0px solid #eee !important;
+	width: 20%;
+}
+/*.main-grid {
+	margin-top: 49px;
+}	*/																																							
+.main-grid thead th:nth-child(even){
+	background-color: #ffeeff !important;
+}
+.main-grid .staff .content{
+	margin-top: 20px;
+	min-height: 55px!important;
+}
+.thead-label-staff{
+	background: #fff !important;
+}
+.week-date-title{
+	position: absolute;
+	right: 50px;
+	top:19%;
+	font-size:16pt;
+}

@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html ng-app="timesheetApp">
+    <head>
+        <link rel="stylesheet" type="text/css" href="/static/grid/bootstrap/css/bootstrap.css">
+        <link rel="stylesheet" type="text/css" href="/static/grid/lib/bootstrap-datepicker.css" />
+        <link rel="stylesheet" href="/static/grid/select_n/select2.css">
+        <link rel="stylesheet" href="/static/grid/select_n/select2-bootstrap.css">
+        <link rel="stylesheet" href="/static/grid/jquery_contextmenu/jquery.contextmenu.css">
+        <link href='/static/grid/css/style.css' rel='stylesheet' />
+        <link href='/static/grid/css/tweaks.css' rel='stylesheet' />
+    </head>
+    <body>
+        <!-- <div style="background:#fff;height:10px;width:100%; position:fixed; top:0;z-index:20;">
+        </div> -->
+        <div class="fullwidth padding10" >
+            <div class="row" ng-controller="GridCtrl">
+                <div class="col-xs-12 text-left">
+                    <div class="form-inline toolbar">
+                        <input type="hidden" class="select-centre" name="select_centre" style="min-width: 150px;">
+                        
+                        <label style="margin-left:2%;">
+                            Date :
+                        </label>
+                        <div class="btn-group">
+                            
+                            <button title="Remember this week" id="buttsex" href="#" class="btn btn-default">
+                            <span class="glyphicon glyphicon-pushpin"></span>
+                            </button>
+                            <button id="grid-prev-btn" class="btn btn-default">
+                            <span class="glyphicon glyphicon-chevron-left"></span>
+                            </button>
+                            <button id="grid-next-btn" href="#" class="btn btn-default">
+                            <span class="glyphicon glyphicon-chevron-right"></span>
+                            </button>
+                            <button id="grid-today-btn" href="#" class="btn btn-default">
+                            Today
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <input class="form-control" style="width: 8em;text-align: center;" type="text" id="grid-effective-date" placeholder="Choose date">
+                        </div>
+                        <!--button id="grid-remember" class="btn btn-default">
+                        <span class="glyphicon glyphicon-pushpin"></span>
+                        </button-->
+                        <h3 class="week-date-title">{{ StartDate.format('MMM D') }} - {{ EndDate.format('MMM D') }}, {{ EndDate.format('YYYY') }} </h3>
+                        
+                        <div class="progress progress-striped active table-wrapper-loading pull-right" style="width: 30%;margin-bottom: 0px;margin-top: 10px;display: none;">
+                            <div class="progress-bar center-block"  role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
+                                <span class="sr-only">Loading...</span>Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-12 table-container">
+                    <div class="modal-backdrop fade" style="position: absolute;left: 15px;right: 15px; display: none;"></div>
+                    <div class="table-wrapper">
+                        <table tabindex="0" class="tg main-grid" style="table-layout: fixed; width: 100%;border:1px solid #ccc">
+                            <thead style="border-bottom:1px solid #ccc">
+                                <tr class="thead-label" >
+                                    <th class="tg-031e thead-label-staff" style="width: 20%;">Staff</th>
+                                    <th class="tg-031e thead-label-date clickable" ng-repeat="loopDate in loopDateCache">
+                                        <div class="thead-label-date-day" > {{ loopDate.utc().format('dddd') }}</div>
+                                        <div class="thead-label-date-string">{{ loopDate.utc().format('D MMM') }}</div>
+                                    </th>
+                                    <th class="tg-031e thead-label-total" style="width: 13%;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody ng-controller="StaffCtrl">
+                                <!--
+                                <tr class="tbody-loading">
+                                    <td colspan=7>
+                                        <div class="progress progress-striped active">
+                                            <div class="progress-bar progress-bar-success"  role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
+                                                Loading...<span class="sr-only">Loading...</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr> -->
+                                <tr class="tbody-content" ng-repeat="staff in staffWithShifts" data-id="{{ staff.id }}">
+                                    <td class="staff clickable">
+                                        <div class="content">
+                                            <a class="staff_link" href='#'>
+                                                {{ staff.name }}
+                                            </a>
+                                            <span class="text-right badge-box"  id="badge-box-{{staff.id}}>">
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td ng-repeat="staff_shift in staffShiftMatrix[staff.id] track by $index" style="background: {{staff_shift.colour || ''}}" class="shift clickable">
+                                        <div ng-if="staff_shift.paid == 1" tabindex="0" data-type-id="{{staff_shift.type_id}}" data-id="{{staff_shift.id}}" data-date="{{loopDateCache[$index].format('YYYY-MM-DD')}}" data-location="{{staff_shift.location}}">
+                                            <span ng_if="staff_shift.type_id==2" class="glyphicon glyphicon-repeat" style="float:left;margin-right: -14px;margin-top: 3px;"></span>
+                                            <div class="_content text-center hidden" style="margin-bottom:10px;margin-top:0px;"> 
+                                                <span style="background:#eee;font-size:8pt;display:inline-block;position:static;padding:3px;">
+                                                    {{ staff_shift._start_time }} - {{ staff_shift._end_time }} %>
+                                                </span>
+                                            </div>
+
+                                            <div class="content" style="font-size:12pt;margin-bottom:10px;">
+                                                {{ staff_shift.start_time }} - {{ staff_shift.end_time }}
+                                            </div>
+                                        </div>
+                                        <div style="background: {{staff_shift.colour || ''}}" ng-if="staff_shift.paid != 1">
+                                        
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot style="border-top:1px solid #ccc">
+                                <tr>
+                                    <td class="tfoot-add-staff clickable"><div class="content">+ Allocate Staff</div></td>
+                                    <td colspan=4 class="filler"></td>
+                                    <td colspan=2 data-value="{{ totalHours }}" class="filler overall-hours text-center"><strong>Total Hours</strong> : <span>{{ totalHours }}</span> hour(s)</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="width: 100%;min-height: 100%;background-color: #000;z-index: 2;position: absolute;top: 0;display: none;opacity: 0.2" class="slide-menu-overlay"></div>
+        <div style="position: absolute; right:-522px;z-index: 20;top:0px;-webkit-transition: right 0.6s;width: 575px;transition: right 0.6s;min-height: 100%;">
+            <div class="col-xs-12" style="padding-right:0px;height: 100%;">
+                
+                <button class="drawerit btn btn-lg btn-primary">
+                <span class="glyphicon glyphicon-edit"></span>
+                </button>
+                <div id="drawerit-pane">
+                    <div style="padding:10px;border: 1px solid #ccc;" id="centre-wrapper"></div>
+                    <div style="padding:10px;border: 1px solid #ccc;" id="category-wrapper"></div>
+                    <div style="padding:10px;border: 1px solid #ccc;" id="qual-wrapper"></div>
+                    <div style="padding:10px;border: 1px solid #ccc;" id="export-wrapper"></div></div>
+                </div>
+            </div>
+            <!-- ########################################## -->
+            <script src='/static/jquery/jquery.js'></script>
+            <script type="text/javascript" src="/static/grid/bootstrap/js/bootstrap.min.js"></script>
+            <script type="text/javascript" src="/static/angular/angular.js"></script>
+            <script type="text/javascript" src="/static/app/controllers.js"></script>
+            <script type="text/javascript" src="/static/grid/jquery.timepicker.js"></script>
+            <script type="text/javascript" src="/static/grid/lib/bootstrap-datepicker.js"></script>
+            <script type="text/javascript" src="/static/grid/underscore/underscore.js"></script>
+            <script type="text/javascript" src="/static/grid/select_n/select2.js"></script>
+            <script type="text/javascript" src="/static/grid/moment.min.js"></script>
+            <script type="text/javascript" src="/static/grid/jquery_contextmenu/jquery.contextmenu.js"></script>
+            <script type="text/javascript" src="/static/grid/event_drag/jquery.event.drag-2.2.js"></script>
+            <script type="text/javascript" src="/static/grid/event_drag/jquery.event.drop-2.2.js"></script>
+            <!-- ########################################## -->
+            <script type="application/javascript">
+                window.g_allocate_staff_array = [];
+                window.g_38_roster_day_offset = 0.4;
+                window.g_break_duration = 0.5;
+                window.g_bs_staffs = [{
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "151",
+                    "badges": "[]",
+                    "name": ""
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "156",
+                    "badges": "[]",
+                    "name": ""
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "148",
+                    "badges": "[]",
+                    "name": ""
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "150",
+                    "badges": "[]",
+                    "name": ""
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "129",
+                    "badges": "[]",
+                    "name": "AddStaffTest AddStaffTestLast"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "49",
+                    "badges": "[]",
+                    "name": "Irish Agamao"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "54",
+                    "badges": "[]",
+                    "name": "Jeanette Alexander"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "91",
+                    "badges": "[]",
+                    "name": "Aileen An"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "37",
+                    "badges": "[]",
+                    "name": "Natalie Arris"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "137",
+                    "badges": "[]",
+                    "name": "Noor Asghar"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "3",
+                    "badges": "[]",
+                    "name": "Belinda Bailey"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "27",
+                    "badges": "[]",
+                    "name": "Lalita Bajaj"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "115",
+                    "badges": "[]",
+                    "name": "Swelha Bandi"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "40",
+                    "badges": "[]",
+                    "name": "Catherine Bell"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "107",
+                    "badges": "[]",
+                    "name": "Manuel Benancurt"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "143",
+                    "badges": "[]",
+                    "name": "Jess Black"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "56",
+                    "badges": "[]",
+                    "name": "Diana Bohorguez"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "69",
+                    "badges": "[]",
+                    "name": "Jennifer Brooke-Wood"
+                }, {
+                    "paymenttype": "38",
+                    "qualification": "",
+                    "id": "5",
+                    "badges": "[]",
+                    "name": "Suzanne Brown"
+                }, {
+                    "paymenttype": "38",
+                    "qualification": "",
+                    "id": "6",
+                    "badges": "[]",
+                    "name": "Karen Buchan"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "7",
+                    "badges": "[]",
+                    "name": "Juliana Carvalho"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "8",
+                    "badges": "[]",
+                    "name": "Kristy Clifton"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "42",
+                    "badges": "[]",
+                    "name": "Lily Crichton"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "74",
+                    "badges": "[]",
+                    "name": "George Davos"
+                }, {
+                    "paymenttype": "38",
+                    "qualification": "",
+                    "id": "79",
+                    "badges": "[]",
+                    "name": "Simone Di Benedetto"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "51",
+                    "badges": "[]",
+                    "name": "Phoebe Dowse- Jones"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "130",
+                    "badges": "[]",
+                    "name": "Rita Falzon"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "9",
+                    "badges": "[]",
+                    "name": "Elyse Ferguson"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "32",
+                    "badges": "[]",
+                    "name": "Gaston Fernandez"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "144",
+                    "badges": "[]",
+                    "name": "Edyta Flores"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "125",
+                    "badges": "[]",
+                    "name": "Whitney Frantzis"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "43",
+                    "badges": "[]",
+                    "name": "Michella Gander"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "112",
+                    "badges": "[]",
+                    "name": "Daphne Gehrels"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "10",
+                    "badges": "[]",
+                    "name": "Fernanda Goncalves"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "152",
+                    "badges": "[]",
+                    "name": "Keira Goodfellow"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "122",
+                    "badges": "[]",
+                    "name": "Rachel Grasso"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "123",
+                    "badges": "[]",
+                    "name": "Rachel Grasso"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "126",
+                    "badges": "[]",
+                    "name": "Emily Gustafson"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "97",
+                    "badges": "[]",
+                    "name": "Kelly Hallas"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "1",
+                    "badges": "[]",
+                    "name": "Nick Harasym"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "11",
+                    "badges": "[]",
+                    "name": "Judith Eleanor Hogan"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "138",
+                    "badges": "[]",
+                    "name": "Megha Janardhan"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "92",
+                    "badges": "[]",
+                    "name": "Christ Kanellopoulos"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "57",
+                    "badges": "[]",
+                    "name": "Kamila Kantorska"
+                }, {
+                    "paymenttype": "38",
+                    "qualification": "",
+                    "id": "34",
+                    "badges": "[]",
+                    "name": "Albertine Kay Hopkirk"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "50",
+                    "badges": "[]",
+                    "name": "Georgia Kelly"
+                }, {
+                    "paymenttype": "38",
+                    "qualification": "",
+                    "id": "78",
+                    "badges": "[]",
+                    "name": "Chaehoe Kim"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "95",
+                    "badges": "[]",
+                    "name": "Jarod Kingston-Brown"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "12",
+                    "badges": "[]",
+                    "name": "Aaron Knox"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "13",
+                    "badges": "[]",
+                    "name": "George Kolistasi"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "14",
+                    "badges": "[]",
+                    "name": "Drahomira Kounovska"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "149",
+                    "badges": "[]",
+                    "name": "First Last"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "116",
+                    "badges": "[]",
+                    "name": "Brooke Leonard"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "15",
+                    "badges": "[]",
+                    "name": "Izabela Lisiecka"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "23",
+                    "badges": "[]",
+                    "name": "Shanshan Long"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "47",
+                    "badges": "[]",
+                    "name": "John Lyons"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "39",
+                    "badges": "[]",
+                    "name": "Katholiki Manoleskos"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "117",
+                    "badges": "[]",
+                    "name": "Sabina Mazumder"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "141",
+                    "badges": "[]",
+                    "name": "blahblah McBlah"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "29",
+                    "badges": "[]",
+                    "name": "Jodie McGoldrick"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "140",
+                    "badges": "[]",
+                    "name": "testy McTest"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "24",
+                    "badges": "[]",
+                    "name": "Dimitra Mihas"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "16",
+                    "badges": "[]",
+                    "name": "Alana Montefiore"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "58",
+                    "badges": "[]",
+                    "name": "Amar Morabe"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "59",
+                    "badges": "[]",
+                    "name": "Jackie Napiza"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "111",
+                    "badges": "[]",
+                    "name": "Susanti Ng"
+                }, {
+                    "paymenttype": "38",
+                    "qualification": "",
+                    "id": "80",
+                    "badges": "[]",
+                    "name": "Carol O'Sullivan"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "19",
+                    "badges": "[]",
+                    "name": "Melisa Perdija"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "21",
+                    "badges": "[]",
+                    "name": "Laura Porto"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "113",
+                    "badges": "[]",
+                    "name": "Kathrina Primero"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "25",
+                    "badges": "[]",
+                    "name": "Cristiane Recchia"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "22",
+                    "badges": "[]",
+                    "name": "Julie Ritzau"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "132",
+                    "badges": "[]",
+                    "name": "Pilar Rodriguez"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "131",
+                    "badges": "[]",
+                    "name": "Pilar Rodriguez Londono"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "60",
+                    "badges": "[]",
+                    "name": "Anita Rosales"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "134",
+                    "badges": "[]",
+                    "name": "Celia Schafer-Wilson"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "136",
+                    "badges": "[]",
+                    "name": "Stephanie Schell"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "28",
+                    "badges": "[]",
+                    "name": "Aiko Shiga"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "61",
+                    "badges": "[]",
+                    "name": "Harpinder  Sidhu"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "127",
+                    "badges": "[]",
+                    "name": "Mathuros(Kim) Srisansuneeyawong"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "55",
+                    "badges": "[]",
+                    "name": "Jeananne Stack"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "31",
+                    "badges": "[]",
+                    "name": "Laura Suarez Neira"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "128",
+                    "badges": "[]",
+                    "name": "GK Test Surname"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "154",
+                    "badges": "[]",
+                    "name": "Christian Tagle"
+                }, {
+                    "paymenttype": "salary",
+                    "qualification": "",
+                    "id": "93",
+                    "badges": "[]",
+                    "name": "test test"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "106",
+                    "badges": "[]",
+                    "name": "test test"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "139",
+                    "badges": "[]",
+                    "name": "test f1 test l1"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "142",
+                    "badges": "[]",
+                    "name": "test2 f1 test2 l1"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "114",
+                    "badges": "[]",
+                    "name": "Ngaire Toomaga"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "45",
+                    "badges": "[]",
+                    "name": "Elizabeth Toomey"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "133",
+                    "badges": "[]",
+                    "name": "Rebecca Tovey"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "118",
+                    "badges": "[]",
+                    "name": "Yuko Uchida"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "38",
+                    "badges": "[]",
+                    "name": "Kevin Van Dung Dang"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "135",
+                    "badges": "[]",
+                    "name": "Adriana Willers"
+                }, {
+                    "paymenttype": "40",
+                    "qualification": "",
+                    "id": "145",
+                    "badges": "[]",
+                    "name": "Adriana Willers"
+                }];
+                window.g_bs_shifts = [{
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3395',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-09',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3404',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-10',
+                    'end_time': '05:00 PM',
+                    'location': '2'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3414',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-09',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3415',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-14',
+                    'end_time': '06:00 PM',
+                    'location': '4'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 5,
+                    'id': '3417',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-09',
+                    'end_time': '06:00 PM',
+                    'location': '6'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3418',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-10',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Noor Asghar',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3420',
+                    'staff_id': '137',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-09',
+                    'end_time': '06:00 PM',
+                    'location': '5'
+                }, {
+                    'staff_name': 'Noor Asghar',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3422',
+                    'staff_id': '137',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-13',
+                    'end_time': '06:00 PM',
+                    'location': '2'
+                }, {
+                    'staff_name': 'Gaston Fernandez',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3425',
+                    'staff_id': '32',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'red',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '5'
+                }, {
+                    'staff_name': 'Laura Suarez Neira',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3429',
+                    'staff_id': '31',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-13',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Keira Goodfellow',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3431',
+                    'staff_id': '152',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Jeanette Alexander',
+                    'type_id': '1',
+                    'start_time': '07:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3434',
+                    'staff_id': '54',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-09',
+                    'end_time': '03:00 PM',
+                    'location': '2'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3461',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-09',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3463',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-10',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3464',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-14',
+                    'end_time': '06:00 PM',
+                    'location': '4'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3465',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '2'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3466',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-09',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '5',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3467',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-15',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3468',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-09',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3469',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-10',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '4',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3470',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-13',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Noor Asghar',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3471',
+                    'staff_id': '137',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-13',
+                    'end_time': '06:00 PM',
+                    'location': '2'
+                }, {
+                    'staff_name': 'Noor Asghar',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3472',
+                    'staff_id': '137',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-09',
+                    'end_time': '06:00 PM',
+                    'location': '5'
+                }, {
+                    'staff_name': 'Noor Asghar',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3473',
+                    'staff_id': '137',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-15',
+                    'end_time': '06:00 PM',
+                    'location': '3'
+                }, {
+                    'staff_name': 'Gaston Fernandez',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3474',
+                    'staff_id': '32',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '5'
+                }, {
+                    'staff_name': 'Keira Goodfellow',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3475',
+                    'staff_id': '152',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '15'
+                }, {
+                    'staff_name': 'Keira Goodfellow',
+                    'type_id': '12',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3477',
+                    'staff_id': '152',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-14',
+                    'end_time': '04:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Laura Suarez Neira',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3478',
+                    'staff_id': '31',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-13',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Laura Suarez Neira',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3479',
+                    'staff_id': '31',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Keira Goodfellow',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3480',
+                    'staff_id': '152',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Keira Goodfellow',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3481',
+                    'staff_id': '152',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-13',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Jeanette Alexander',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3482',
+                    'staff_id': '54',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-09',
+                    'end_time': '02:00 PM',
+                    'location': '4'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '5',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3486',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-15',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Laura Suarez Neira',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3487',
+                    'staff_id': '31',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-14',
+                    'end_time': '04:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Daphne Gehrels',
+                    'type_id': '5',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3488',
+                    'staff_id': '112',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-15',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Keira Goodfellow',
+                    'type_id': '12',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3489',
+                    'staff_id': '152',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-14',
+                    'end_time': '04:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3495',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-13',
+                    'end_time': '06:00 PM',
+                    'location': '2'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3496',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-14',
+                    'end_time': '06:00 PM',
+                    'location': '5'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3499',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-09',
+                    'end_time': '06:00 PM',
+                    'location': '2'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3500',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-13',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3501',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-14',
+                    'end_time': '06:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'AddStaffTest AddStaffTestLast',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3502',
+                    'staff_id': '129',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-15',
+                    'end_time': '06:00 PM',
+                    'location': '5'
+                }, {
+                    'staff_name': 'Jeanette Alexander',
+                    'type_id': '9',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3503',
+                    'staff_id': '54',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-13',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Jeanette Alexander',
+                    'type_id': '3',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3504',
+                    'staff_id': '54',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-14',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Jeanette Alexander',
+                    'type_id': '3',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3505',
+                    'staff_id': '54',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-15',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Jeanette Alexander',
+                    'type_id': '9',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3506',
+                    'staff_id': '54',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Noor Asghar',
+                    'type_id': '7',
+                    'start_time': '09:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3507',
+                    'staff_id': '137',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': 'None',
+                    'day': '2015-04-14',
+                    'end_time': '05:00 PM',
+                    'location': '1'
+                }, {
+                    'staff_name': 'Noor Asghar',
+                    'type_id': '1',
+                    'start_time': '08:00 AM',
+                    '_end_time': '06:00 PM',
+                    'paid': '1',
+                    '_start_time': '08:00 AM',
+                    'threshold': 15,
+                    'id': '3508',
+                    'staff_id': '137',
+                    'allDay': 'true',
+                    'title': '',
+                    'colour': '',
+                    'day': '2015-04-10',
+                    'end_time': '06:00 PM',
+                    'location': '4'
+                }];
+                window.g_bs_categories = [{
+                    'color': 'cdebfc',
+                    'paymenttype': '1',
+                    'id': '1',
+                    'name': 'Base Hourly'
+                }, {
+                    'color': 'ffff80',
+                    'paymenttype': '1',
+                    'id': '2',
+                    'name': 'Recurring Shift'
+                }, {
+                    'color': '008000',
+                    'paymenttype': '1',
+                    'id': '3',
+                    'name': 'Holiday Leave'
+                }, {
+                    'color': 'ffecec',
+                    'paymenttype': '1',
+                    'id': '4',
+                    'name': 'Personal Leave Paid'
+                }, {
+                    'color': '8000ff',
+                    'paymenttype': '1',
+                    'id': '5',
+                    'name': 'Long Service Leave'
+                }, {
+                    'color': 'f7fac9',
+                    'paymenttype': '1',
+                    'id': '6',
+                    'name': 'Rostered Day Off'
+                }, {
+                    'color': '00f907',
+                    'paymenttype': '1',
+                    'id': '7',
+                    'name': 'asdaserte'
+                }, {
+                    'color': 'ff80c0',
+                    'paymenttype': '1',
+                    'id': '8',
+                    'name': 'Agency '
+                }, {
+                    'color': 'ffffff',
+                    'paymenttype': '1',
+                    'id': '9',
+                    'name': 'Test1'
+                }, {
+                    'color': 'ffffff',
+                    'paymenttype': '1',
+                    'id': '10',
+                    'name': 'Test cat'
+                }, {
+                    'color': 'e4dadb',
+                    'paymenttype': '1',
+                    'id': '11',
+                    'name': 'Public Holiday'
+                }, {
+                    'color': 'ffffff',
+                    'paymenttype': '1',
+                    'id': '12',
+                    'name': 'Annual Leave'
+                }, {
+                    'color': 'c4ffe1',
+                    'paymenttype': '1',
+                    'id': '13',
+                    'name': 'Hourly Holiday Pay'
+                }, {
+                    'color': 'e453e8',
+                    'paymenttype': '0',
+                    'id': '14',
+                    'name': 'Personal Leave (Unpaid)'
+                }, {
+                    'color': 'ffffff',
+                    'paymenttype': '1',
+                    'id': '15',
+                    'name': 'Leave(Unpaid)'
+                }, {
+                    'color': 'ff0080',
+                    'paymenttype': '0',
+                    'id': '16',
+                    'name': 'Leave(Unpaid)'
+                }, {
+                    'color': 'f53636',
+                    'paymenttype': '1',
+                    'id': '17',
+                    'name': 'a category'
+                }, {
+                    'color': 'ffffff',
+                    'paymenttype': '1',
+                    'id': '22',
+                    'name': 'Test'
+                }, {
+                    'color': 'ffffff',
+                    'paymenttype': '1',
+                    'id': '23',
+                    'name': 'Test'
+                }, {
+                    'color': 'ffffff',
+                    'paymenttype': '0',
+                    'id': '24',
+                    'name': 'Paid'
+                }, {
+                    'color': 'ff0000',
+                    'paymenttype': '0',
+                    'id': '25',
+                    'name': 'UNPAID'
+                }];
+                window.g_bs_centres = [{
+                    'threshold': '15',
+                    'phone': '0293113522',
+                    'address': '419A Beauchamp Road Maroubra',
+                    'id': '1',
+                    'name': 'Eastlakes'
+                }, {
+                    'threshold': '15',
+                    'phone': '0293113522',
+                    'address': '419A Beauchamp Road Maroubra',
+                    'id': '2',
+                    'name': 'Duffys  '
+                }, {
+                    'threshold': '15',
+                    'phone': '0299298098',
+                    'address': '3 Rodborough Road Crows Nest',
+                    'id': '4',
+                    'name': 'Crows Nest'
+                }, {
+                    'threshold': '15',
+                    'phone': '0296695444',
+                    'address': '5-13 Rosebery Avenue Rosebery',
+                    'id': '5',
+                    'name': 'Parklane'
+                }, {
+                    'threshold': '5',
+                    'phone': '0285829007',
+                    'address': '5-13 Rosebery Avenue Rosebery',
+                    'id': '6',
+                    'name': 'Troppo '
+                }, {
+                    'threshold': '15',
+                    'phone': '0296670888',
+                    'address': '5-13 Rosebery Avenue Rosebery',
+                    'id': '7',
+                    'name': 'Managesource'
+                }, {
+                    'threshold': '15',
+                    'phone': '0296696090',
+                    'address': '4 Florence Avenue Eastlakes',
+                    'id': '8',
+                    'name': 'OSHC'
+                }, {
+                    'threshold': '0',
+                    'phone': '',
+                    'address': '',
+                    'id': '9',
+                    'name': 'Test1'
+                }, {
+                    'threshold': '0',
+                    'phone': '',
+                    'address': '',
+                    'id': '10',
+                    'name': 'Test'
+                }, {
+                    'threshold': '15',
+                    'phone': '0344534',
+                    'address': '23 Troppe st',
+                    'id': '11',
+                    'name': 'Troppo'
+                }, {
+                    'threshold': '0',
+                    'phone': '',
+                    'address': '',
+                    'id': '12',
+                    'name': 'a'
+                }, {
+                    'threshold': '0',
+                    'phone': '2345678901',
+                    'address': 'a1',
+                    'id': '13',
+                    'name': 'a1'
+                }, {
+                    'threshold': '0',
+                    'phone': '6465754665',
+                    'address': 'moo',
+                    'id': '14',
+                    'name': 'Nick Harasym'
+                }, {
+                    'threshold': '15',
+                    'phone': '',
+                    'address': '',
+                    'id': '15',
+                    'name': 'NEO Networks '
+                }, {
+                    'threshold': '0',
+                    'phone': 'test',
+                    'address': 'Test',
+                    'id': '16',
+                    'name': 'Test'
+                }, {
+                    'threshold': '0',
+                    'phone': '0451043434',
+                    'address': 'an adress',
+                    'id': '19',
+                    'name': 'a centre'
+                }];
+                // window.g_bs_quals = new UQuals([]);
+                window.g_bs_curDate = 1428537600000;
+                window.g_start_time = '8:00 am';
+                window.g_end_time = '6:00 pm';
+                window.g_copy = 0;
+                //Break duration in terms of hours
+                window.g_break_threshold = 6;
+                window.g_break_duration = 0.5;
+                window.staffs = g_bs_staffs;
+                window.shifts = g_bs_shifts;
+                window.categories = g_bs_categories;
+                window.centres = g_bs_centres;
+                // window.quals = g_bs_quals;
+                window.centre_id = '0';
+                window.g_shiftTableView = null;
+                window.g_prev_week = 1428536995200;
+                window.g_next_week = 1428538204800;
+                var retArray = [];
+                retArray.push({
+                    id: '0',
+                    text: 'Centre'
+                });
+                for (centre in centres){
+                    retArray.push({
+                        id: centre.id,
+                        text: centre.name
+                    });
+                }
+
+
+            </script>
+            <script src="/static/grid/app/views/datepicker.js"></script>
+            <!-- ################## end application # -->
+        </body>
+    </html>

@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html ng-app="timesheetApp">
+    <head>
+    <link rel="stylesheet" type="text/css" href="/static/grid/bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="/static/grid/lib/bootstrap-datepicker.css" />
+    <link rel="stylesheet" href="/static/grid/select_n/select2.css">
+    <link rel="stylesheet" href="/static/grid/select_n/select2-bootstrap.css">
+    <link rel="stylesheet" href="/static/grid/jquery_contextmenu/jquery.contextmenu.css">
+    <link href='/static/grid/css/style.css' rel='stylesheet' />
+    <link href='/static/grid/css/tweaks.css' rel='stylesheet' />
+</head>
+<body>
+
+<!-- <div style="background:#fff;height:10px;width:100%; position:fixed; top:0;z-index:20;">
+</div> -->
+
+
+<div class="fullwidth padding10" >
+    <div class="row">
+        <div class="col-xs-12 text-left">
+            <div class="form-inline toolbar">
+
+            <input type="hidden" class="select-centre" name="select_centre" style="min-width: 150px;">
+            
+
+            <label style="margin-left:2%;">
+                Date : 
+            </label>
+            <div class="btn-group">
+                
+                <button title="Remember this week" id="buttsex" href="#" class="btn btn-default">
+                    <span class="glyphicon glyphicon-pushpin"></span>
+                </button>
+
+                <button id="grid-prev-btn" class="btn btn-default">
+                    <span class="glyphicon glyphicon-chevron-left"></span>
+                </button>
+
+                <button id="grid-next-btn" href="#" class="btn btn-default">
+                    <span class="glyphicon glyphicon-chevron-right"></span>
+                </button>
+
+                <button id="grid-today-btn" href="#" class="btn btn-default">
+                    Today
+                </button>
+            </div>
+
+            <div class="form-group">
+                <input class="form-control" style="width: 8em;text-align: center;" type="text" id="grid-effective-date" placeholder="Choose date">
+            </div>
+            <!--button id="grid-remember" class="btn btn-default">
+                <span class="glyphicon glyphicon-pushpin"></span>
+            </button-->
+
+
+            <h3 class="week-date-title"></h3>
+            
+            <div class="progress progress-striped active table-wrapper-loading pull-right" style="width: 30%;margin-bottom: 0px;margin-top: 10px;display: none;">
+                <div class="progress-bar center-block"  role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
+                    <span class="sr-only">Loading...</span>Loading...
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-xs-12 table-container">
+            <div class="modal-backdrop fade" style="position: absolute;left: 15px;right: 15px; display: none;"></div>
+            <div class="table-wrapper">
+            </div>
+        </div>
+    </div>
+</div>
+<div style="width: 100%;min-height: 100%;background-color: #000;z-index: 2;position: absolute;top: 0;display: none;opacity: 0.2" class="slide-menu-overlay"></div>
+
+<div style="position: absolute; right:-522px;z-index: 20;top:0px;-webkit-transition: right 0.6s;width: 575px;transition: right 0.6s;min-height: 100%;">
+    <div class="col-xs-12" style="padding-right:0px;height: 100%;">
+        
+        <button class="drawerit btn btn-lg btn-primary">
+        <span class="glyphicon glyphicon-edit"></span>
+        </button>
+
+    <div id="drawerit-pane">
+        <div style="padding:10px;border: 1px solid #ccc;" id="centre-wrapper"></div>
+        <div style="padding:10px;border: 1px solid #ccc;" id="category-wrapper"></div>
+        <div style="padding:10px;border: 1px solid #ccc;" id="qual-wrapper"></div>
+        <div style="padding:10px;border: 1px solid #ccc;" id="export-wrapper"></div></div>
+    </div>
+</div>
+
+<!-- template start -->
+<script type="text/template" id="shift_table">
+    <h1>Hellow</h1>
+</script>
+<!--
+<script type="text/template" id="shift_table">
+    <table tabindex="0" class="tg main-grid" style="table-layout: fixed; width: 100%;border:1px solid #ccc">
+        <thead style="border-bottom:1px solid #ccc">
+        <tr class="thead-label" >
+            <th class="tg-031e thead-label-staff" style="width: 20%;">Staff</th>
+            <% window.loopDateCache = []; var curDate = moment(showDate).utc(); var iStart=-3,iEnd = 3, iExclude=[-1,0]; if(curDate.weekday() >= 4) { iStart=4;iEnd=10,iExclude=[6,7]; } %>
+            <% for(var i= iStart; i<=iEnd;i++) {  %>
+                <% if( !_.contains(iExclude,i)) {
+                var loopDate = moment(curDate).weekday(i); loopDateCache.push(loopDate); %>
+                <th class="tg-031e thead-label-date clickable"><div class="thead-label-date-day"><%= loopDate.utc().format('dddd') %></div><div class="thead-label-date-string"><%= loopDate.utc().format('D MMM') %></div></th>
+                <% } %>
+            <% } %>
+            <th class="tg-031e thead-label-total" style="width: 13%;">Total</th>
+        </tr>
+        </thead>
+        <tbody>
+            <tr class="tbody-loading">
+                <td colspan=7>
+                    <div class="progress progress-striped active">
+                        <div class="progress-bar progress-bar-success"  role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
+                            Loading...<span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <% var totalHours = 0; %>
+
+            <% staffs.each(function(staff){ %>
+
+                <% if(shifts.where({staff_id:staff.get('id')}).length) { %>
+                    
+                <tr class="tbody-content" data-id="<%= staff.get('id') %>">
+                <% var totalStaffHours = 0; %>
+
+                    <td class="staff clickable">
+                        <div class="content">
+                            <a class="staff_link" href='#'>
+                                <%= staff.get('name') %>
+                            </a>
+                            <span class="text-right badge-box"  id="badge-box-<%=staff.get('id')%>">
+
+                            </span>
+                        </div>
+
+                        
+
+                    </td>
+
+                    <% for(var i=0;i<5;i++) { %>
+                        <% var shift = shifts.where({staff_id:staff.get('id'),day:loopDateCache[i].format('YYYY-MM-DD')}); %>
+            
+            <% if(shift.length > 0 && shift[0].get('type_id') != 2) { %>
+
+    <%if(shift[0].get('paid') == 1){ %>
+        <td style="background:<%= shift[0].get('colour') || '' %>;" tabindex="0" data-type-id="<%= shift[0].get('type_id') %>" data-id="<%= shift[0].get('id') %>" data-date="<%= loopDateCache[i].format('YYYY-MM-DD') %>" data-location="<%= shift[0].get('location') %>" class="shift clickable"><%= _.template($('#template_shift').html(), {shift: shift[0]})  %><% var curStaffHour = 0;
+                if(staff.get('paymenttype') == 'salary'){ curStaffHour = 8;}
+                else { curStaffHour = (moment(shift[0].get('end_time'),'h:mm a').diff(moment(shift[0].get('start_time'),'h:mm a'),'hour',true));
+
+
+                    if(curStaffHour>g_break_threshold) { if(staff.get('paymenttype') == '38')
+                    {
+                        curStaffHour = curStaffHour - g_38_roster_day_offset;
+                        }
+                curStaffHour=curStaffHour - g_break_duration; }
+                }
+                totalStaffHours = totalStaffHours + curStaffHour;  %></td>
+
+                <% } else {
+                        console.log(shift[0]);
+                        var category = categories.where({id:shift[0].get('type_id')});
+                        var curStaffHour =0;
+                        if(staff.get('paymenttype') !== '38'){ curStaffHour = 8;}
+                        else {
+                            curStaffHour = 8 - g_38_roster_day_offset;
+                        }
+                        //totalStaffHours = totalStaffHours + curStaffHour;
+                        %><td tabindex="0" data-type-id="<%= shift[0].get('type_id') %>" data-id="<%= shift[0].get('id') %>" data-location="<%= shift[0].get('location') %>" data-date="<%= loopDateCache[i].format('YYYY-MM-DD') %>" style="background:#<%=category[0].get('color')%>;" class="category clickable"><%= _.template($('#template_category').html(), {category: category[0],paid:category[0].get('paymenttype')})  %></td><% }} else { var shift_recur = shifts.filter(function(shift){ if(shift.get('staff_id') == staff.get('id') && shift.get('type_id') == 2 && (moment.utc(shift.get('day')).format('d') ==  loopDateCache[i].format('d')) ) {console.log('hit'); return true; } else { return false; } }); if(shift_recur.length > 0) { %><td tabindex="0" data-type-id="<%= shift_recur[0].get('type_id') %>" data-id="<%= shift_recur[0].get('id') %>" data-location="<%= shift_recur[0].get('location') %>" data-date="<%= loopDateCache[i].format('YYYY-MM-DD') %>" class="shift clickable"><%= _.template($('#template_shift').html(), {shift: shift_recur[0]})  %><%
+
+       var curStaffHour = 0;
+       if(staff.get('paymenttype') == 'salary'){ curStaffHour = 8;}
+                    else { curStaffHour = (moment(shift_recur[0].get('end_time'),'h:mm a').diff(moment(shift_recur[0].get('start_time'),'h:mm a'),'hour',true));
+                        if(curStaffHour>g_break_threshold) {
+if(staff.get('paymenttype') == '38')
+                    {
+                        curStaffHour = curStaffHour - g_38_roster_day_offset;
+                        }
+                        curStaffHour=curStaffHour-g_break_duration; }
+                    }
+                    totalStaffHours = totalStaffHours + curStaffHour;  %></td>
+
+                    <% } else { %>
+
+                        <td tabindex="0"
+                            id="<%= 'cell-' + staff.get('id') + '-' + loopDateCache[i].format('DD') %>"
+                            data-date="<%= loopDateCache[i].format('YYYY-MM-DD') %>" 
+                            class="empty clickable">
+                                
+                        </td>
+
+                        <% if(window.centre_id!='0') {
+                            var dd = loopDateCache[i].format('DD');
+                            $.ajax({
+                                method:"POST",
+                                url:'/timesheets/wherewas',
+                                data:JSON.stringify({
+                                    "user_id":staff.get('id'),
+                                    "day":loopDateCache[i].format('DD-MM-YYYY').toString()
+                                }),
+                                success:function(data){
+                                    var loc = "<h5>" + data.location + "</h5>";
+                                    var tim = "<h6>" + data.start_time + " - " + data.end_time + "</h6>";
+                                    var html = loc+tim;
+                                    $("#"+"cell-" + staff.get('id') + "-" + dd).removeClass('empty clickable').html(html);
+
+                                }
+                            });
+                        %>
+
+                        <%}%>
+                     <%} } %>
+                    <%} %>
+                    <td data-value="<%= totalStaffHours %>"><% if(totalStaffHours > 0){  %><% totalHours = totalHours + totalStaffHours %><%= +totalStaffHours.toFixed(2) + ' hour(s)' %><% } else { %>-<% } %></td>
+                </tr>
+                <% } %>
+            <% }); %>
+
+        </tbody>
+        <tfoot style="border-top:1px solid #ccc">
+            <tr>
+                <td class="tfoot-add-staff clickable"><div class="content">+ Allocate Staff</div></td>
+                <td colspan=4 class="filler"></td>
+                <td colspan=2 data-value="<%= totalHours %>" class="filler overall-hours text-center"><strong>Total Hours</strong> : <span><%= +totalHours.toFixed(2) %></span> hour(s)</td>
+            </tr>
+        </tfoot>
+    </table>
+</script>
+-->
+
+<script type="text/template" id="notes-grid">
+    <% _.each(notes, function(note){ %>
+        <div class="the-note" 
+             style="border:1px dotted #eee;padding:3px;margin:2px;"
+             data-id="<%=note.id%>"
+             data-shift-id="<%=note.shift_id%>"
+        >
+
+          <div class="text-right" style>
+            <a class="btn btn-default btn-xs glyphicon glyphicon-pencil edit-note" data-id="<%=note.id%>">
+            </a>
+            <a class="btn glyphicon btn-default btn-xs glyphicon-trash del-note" data-id="<%=note.id%>" >
+            </a>
+          </div>
+          <%=note.note%>
+
+        </div>
+    <%});%>
+    
+</script>
+<script type="text/template" id="note-content">
+    <div style="min-width:200px;width:auto;" id="note-area" data-id="<%=id%>">
+      <img src="/static/grid/indicator.gif" class="notes-indicator hidden" />
+      <div id="the-notes">
+        
+      </div>
+        <div class="input-group editor">
+            <textarea 
+                class="form-control" 
+                style="background:#fefefe;"></textarea>
+            <span class="btn input-group-addon ok">
+                <i class="glyphicon glyphicon-edit"></i>
+            </span>
+        </div>
+    </div>
+</script>
+<script type="text/template" id="note-trigger">
+    <button id="notes" class='btn pull-right notes glyphicon glyphicon-paperclip dropdown-toggle'
+        style="padding:5px;background:none; color:#444;"
+        data-toggle="dropdown"
+    ></button>
+</script>
+<script type="text/template" id="icon_manager">
+    <% if(window.badges){
+        _.each(window.badges,function (b) {
+    %>
+        <img class="rate-icon <%=b.active && 'btn btn-default active' || '' %>" data-id="<%=b.id%>" src="<%= b.file %>" style="width:64px;max-height:64px;"/>
+    <%});}%>
+</script>
+
+<script type="text/template" id="template_icon_manager">
+    <style>
+        .icon-manager-box .btn{padding:3px;background:#88f;}
+    </style>
+    <div class="icon-manager-box">
+        <%=_.template($('#icon_manager').html() )()%>
+    </div>
+    
+    <p class="text-right">
+        <a class="btn" id="manage-trigger">Manage</a>
+    </p>
+
+    <div id="manage" class="hidden">
+    <hr>
+     <form style="display:inline-block;" id="browse-icons">
+        <h4>Upload:</h4>
+        <input accept='image/*' type="file" id="new-icons" name="file">
+     </form>
+     <img src="/static/grid/indicator.gif" class="icon-indicator hidden" />
+     <p class="icon-error hidden">
+        Could not upload icons. 
+        Please check internet conntection or server ability.
+     </p>
+     <hr>
+     <a class="btn remove">
+        <i class="glyphicon glyphicon-trash">
+            Remove
+        </i>
+     </a>
+    </div>
+
+
+</script>
+
+<script type="text/template" id="badge-image">
+    <img class="btn active rank-icon r-q-<%=qual.get('id')%>" data-index=".r-q-<%=qual.get('id')%>" src="<%=src%>"
+    />
+</script>
+
+<script type="text/template" id="template_shift">
+    <% if(shift.get("type_id") == 2) { %><span class="glyphicon glyphicon-repeat" style="float:left;margin-right: -14px;margin-top: 3px;"></span><% } %>
+    <div class="_content text-center hidden" style="margin-bottom:10px;margin-top:0px;"> 
+        <span style="background:#eee;font-size:8pt;display:inline-block;position:static;padding:3px;">
+            <%= shift.get('_start_time') %> - <%= shift.get('_end_time') %>
+        </span>
+    </div>
+
+    <div class="content" style="font-size:12pt;style="margin-bottom:10px;">
+        <%= shift.get('start_time') %> - <%= shift.get('end_time') %>
+    </div>
+
+    
+
+    <% if(!Number(window.centre_id)) { %>
+        <% var centre = centres.where({id:shift.get('location')});
+         %>
+        <%if(centre.length){%>
+            <span class='label change-centre' style="padding:4px;background:#fff; color:#555; display:inline-block;">
+                <%=centre[0].get('name') %>
+            </span>
+            <input type="hidden" id="location" value="<%=shift.get('location')%>"/>
+        <%}%>
+
+
+    
+    <% } %>
+
+</script>
+
+<script type="text/template" id="template_staff_create">
+<div class="alert alert-success" style="display: none;"></div>
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="username">Username</label>
+            <div class="col-sm-9">
+                <input type="text" name="username" placeholder="Enter username" class="form-control" required=true>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="email">Email Address</label>
+            <div class="col-sm-9">
+                <input type="text" name="email" placeholder="Enter email address" class="form-control" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="first_name">First Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="first_name" placeholder="Enter first name" class="form-control" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="last_name">Last Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="last_name" placeholder="Enter last name" class="form-control" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Address</label>
+            <div class="col-sm-9">
+                <input type="text" name="address" placeholder="Enter address" class="form-control" >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="phone">Phone</label>
+            <div class="col-sm-9">
+                <input type="text" name="phone" placeholder="Enter phone number" class="form-control" >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="group">Payroll Record Id</label>
+            <div class="col-sm-9">
+                <input type="text" name="employee_record_id" placeholder="Enter emplyoee id" class="form-control" >
+            </div>
+        </div>
+
+         <div class="form-group">
+            <label class="col-sm-3 control-label" for="paymenttype">Payment Type</label>
+            <div class="col-sm-9" style="margin-top: 6px;">
+                  <input type="radio" name="paymenttype" value="salary">Salaried<br>
+                  <input type="radio" name="paymenttype" value="38">38 Hours<br>
+                  <input type="radio" name="paymenttype" value="40">40 Hours
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-3 control-label" for="allocated_centres">Allocated Centre(s)</label>
+            <div class="col-sm-9">
+                <input style="width:100%" class="allocated_centres" name="allocated_centres" type="hidden" value="">
+            </div>
+         </div>
+
+         <div class="form-group">
+            <label class="col-sm-3 control-label" for="certs">Qualification</label>
+            <div class="col-sm-9">
+                <input style="width:100%" id="qualification"  name="qualification" type="hidden">
+            </div>
+        </div>
+         
+    </form>
+</script>
+
+
+<script type="text/template" id="template_staff_edit">
+<div class="alert alert-success" style="display: none;"></div>
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="username">Username</label>
+            <div class="col-sm-9">
+                <p class="form-control-static"><%= staff.get('username') %></p>
+            </div>
+        </div>
+         <div class="form-group">
+            <label class="col-sm-3 control-label" for="email">Email Address</label>
+            <div class="col-sm-9">
+                <input type="text" name="email" placeholder="Enter email address" class="form-control" value="<%= staff.get('email') %>" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="first_name">First Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="first_name" placeholder="Enter first name" class="form-control" value="<%= staff.get('first_name') %>" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="last_name">Last Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="last_name" placeholder="Enter last name" class="form-control" value="<%= staff.get('last_name') %>" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Address</label>
+            <div class="col-sm-9">
+                <input type="text" name="address" placeholder="Enter address" class="form-control" value="<%= staff.get('address') %>">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="phone">Phone</label>
+            <div class="col-sm-9">
+                <input type="text" name="phone" placeholder="Enter phone number" class="form-control" value="<%= staff.get('phone') %>">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="employee_record_id">Payroll Record Id</label>
+            <div class="col-sm-9">
+                <input type="text" name="employee_record_id" placeholder="Enter emplyoee id" class="form-control" value="<%= staff.get('employee_id') %>" >
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="paymenttype">Payment Type</label>
+            <div class="col-sm-9" style="margin-top: 6px;">
+                  <input type="radio" name="paymenttype" value="salary">Salaried<br>
+                  <input type="radio" name="paymenttype" value="38">38 Hours<br>
+                  <input type="radio" name="paymenttype" value="40">40 Hours
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="allocated_centres">Allocated Centre(s)</label>
+            <div class="col-sm-9">
+                <input style="width:100%" class="allocated_centres"  name="allocated_centres" type="hidden" value="<%= staff.get('allocated_centres') %>">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="qq">Qualification</label>
+            <div class="col-sm-9">
+                <input style="width:100%" id="qualification"  name="qualification" type="hidden" value="<%= staff.get('qualification') %>"/>
+            </div>
+        </div>
+
+
+
+    </form>
+</script>
+<script type="text/template" id="template_staff_delete">
+<div class="alert alert-success" style="display: none;"></div>
+Are you sure, you want to delete this staff?
+</script>
+
+<script type="text/template" id="template_allocate_dummy_staffs">
+            <tr class="tbody-content" data-id="<%= staff.get('id') %>">
+            <td class="staff clickable"><div class="content"><a class="staff_link" href='#'><%= staff.get('name') %></a></div></td>
+            <% var totalStaffHours = 0; %>
+            <% for(var i=0;i<5;i++) { %>
+                <td tabindex="0" data-date="<%= loopDateCache[i].format('YYYY-MM-DD') %>" class="empty clickable"></td>
+            <% } %>
+            <td data-value="<%= totalStaffHours %>"><% if(totalStaffHours > 0){  %><%= totalStaffHours + ' hour(s)' %><% } else { %>-<% } %></td>
+            </tr>
+</script>
+
+
+<script type="text/template" id="template_allocate_staffs">
+    <input style="width:100%" class="allocate_staff_select" type="hidden" value="">
+    <div class="allocate-staff-toolbar pull-right">
+        <button class="btn btn-sm ok" style="background:none;"><span class="glyphicon glyphicon-ok"></span></button><button class="btn btn-sm cancel" style="background:none;"><span class="glyphicon glyphicon-remove"></span></button>
+    </div>
+</script>
+
+<script type="text/template" id="template_shift_staff_hours">
+    <div><%= shift.get('start_time') %> - <%= shift.get('end_time') %></div>
+</script>
+
+
+<script type="text/template" id="qual-table-display">
+    <a class="create btn btn-primary btn-xs pull-right" style="margin-top:2px;margin-bottom:2px;">+ Create</a>
+    <strong>Qualification</strong>
+    
+    <table class="slide-panel" style="min-width:490px;">
+        <thead>
+        <tr>
+        <th style="width:80px;">Id</th>
+        <th>Name</th>
+        <th style="width:80px;">Action</th>
+        </tr>
+    <thead>
+    
+    <tbody>
+    <% quals.each(function(qual){ %>
+        <tr>
+            <td><%= qual.get('id') %></td><td><%= qual.get('name') %></td><td><a style="padding: 3px;cursor:pointer" class="tb-inline-tool edit"><span class="glyphicon glyphicon-pencil"></span></a>&nbsp;&nbsp;
+
+                <a style="padding: 3px;cursor:pointer" class="tb-inline-tool delete"><span class="glyphicon glyphicon-remove"></span></a>
+            </td>
+        </tr>
+    <% }); %>
+    </tbody>
+    </table>
+</script>
+
+<script type="text/template" id="template_qual_edit">
+<div class="alert alert-success" style="display: none;"></div>
+
+    <style>
+        .icon-ce .btn{padding:3px;background:#88f;}
+    </style>
+
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="name" placeholder="Enter name" class="form-control" value="<%= qual.get('name') %>" required>
+            </div>
+        </div>
+         <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Type</label>
+            <div class="col-sm-9">
+                <select name="type" class="form-control" value="<%=qual.get('type')%>">
+                    <option>Qualification</option>
+                    <option>Education</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="icon">Icon</label>
+            <div class="col-sm-9 icon-ce">
+            <input type="hidden" name="badge" id="icon" value="<%=qual.get('badge')%>"/>
+                <%=_.template($('#icon_manager').html() )()%>
+                <a class="btn btn-default glyphicon glyphicon-plus" id="man-ico"></a>
+            </div>
+        </div>
+
+    </form>
+</script>
+
+<script type="text/template" id="template_qual_delete">
+<div class="alert alert-success" style="display: none;"></div>
+Are you sure, you want to delete this qualification?
+</script>
+
+<script type="text/template" id="template_qual_create">
+<div class="alert alert-success" style="display: none;"></div>
+    <style>
+        .icon-ce .btn{padding:3px;background:#88f;}
+    </style>
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="name" placeholder="Name" class="form-control" value="" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Type</label>
+            <div class="col-sm-9">
+                <select name="type" class="form-control">
+                    <option>Qualification</option>
+                    <option>Education</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="icon">Icon</label>
+            <div class="col-sm-9 icon-ce">
+            <input type="hidden" name="badge" id="icon"/>
+                <%=_.template($('#icon_manager').html() )()%>
+                <a class="btn btn-default glyphicon glyphicon-plus" id="man-ico"></a>
+            </div>
+        </div>
+
+    </form>
+</script>
+
+
+
+
+<script type="text/template" id="centre-table-display"><a class="create btn btn-primary btn-xs pull-right" style="margin-top:2px;margin-bottom:2px;">+ Create</a><strong>Centre</strong>
+<table class="slide-panel" style="min-width:490px;">
+<thead>
+<tr>
+<th style="width:80px;">Id</th>
+<th>Name</th>
+<th style="width:80px;">Action</th>
+</tr>
+<thead>
+<tbody>
+<% centres.each(function(centre){ %>
+    <tr><td><%= centre.get('id') %></td><td><%= centre.get('name') %></td><td><a style="padding: 3px;cursor:pointer" class="tb-inline-tool edit"><span class="glyphicon glyphicon-pencil"></span></a>&nbsp;&nbsp;<a style="padding: 3px;cursor:pointer" class="tb-inline-tool delete"><span class="glyphicon glyphicon-remove"></span></a></td></tr>
+<% }); %>
+</tbody>
+</table>
+</script>
+
+
+<script type="text/template" id="template_centre_edit">
+<div class="alert alert-success" style="display: none;"></div>
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Centre Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="name" placeholder="Enter centre name" class="form-control" value="<%= centre.get('name') %>" required>
+            </div>
+        </div>
+         <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Address</label>
+            <div class="col-sm-9">
+                <input type="text" name="address" placeholder="Enter address" class="form-control" value="<%= centre.get('address') %>">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="phone">Phone</label>
+            <div class="col-sm-9">
+                <input type="text" name="phone" placeholder="Enter phone number" class="form-control" value="<%= centre.get('phone') %>">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="threshold">Treshold</label>
+            <div class="col-sm-9">
+                <input type="number" min="0" name="threshold" class="form-control" value="<%= centre.get('threshold') %>" autocomplete='on'>
+            </div>
+        </div>
+
+    </form>
+</script>
+
+<script type="text/template" id="template_centre_delete">
+<div class="alert alert-success" style="display: none;"></div>
+Are you sure, you want to delete this centre?
+</script>
+
+
+<script type="text/template" id="template_centre_create">
+<div class="alert alert-success" style="display: none;"></div>
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Centre Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="name" placeholder="Enter centre name" class="form-control" value="" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Address</label>
+            <div class="col-sm-9">
+                <input type="text" name="address" placeholder="Enter address" class="form-control" >
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="phone">Phone</label>
+            <div class="col-sm-9">
+                <input type="text" name="phone" placeholder="Enter phone number" class="form-control" >
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="threshold">Treshold</label>
+            <div class="col-sm-9">
+                <input type="number" min="0" name="threshold" class="form-control" value="50" autocomplete='on'>
+            </div>
+        </div>
+
+    </form>
+</script>
+
+
+<script type="text/template" id="centre-filter-export">
+
+	<strong>Export Completed Shifts </strong><br><br>
+
+<form action="/manage/shifts/generate/" method="post">
+	
+	<input type="hidden" name="csrfmiddlewaretoken" value="FD8fGl6u1uDhwoDFMIzeVzft1MYLfNfp" />
+	
+	Select centre
+	<div class="form-group">
+
+		<input type="hidden" class="select-centre-export form-control" name="centre" style="min-width: 150px;">
+	</div>
+	
+	Start Date
+	<div class="form-group">
+    <input name="startdate" class="form-control export-effective-date" style="width: 8em;height: 30px;text-align: center;" type="text"  placeholder="Choose date">
+	</div>
+	<input type="submit" id="export-submit" href="#" class="btn btn-sm btn-primary" value="Export">
+
+</form>
+</script>
+
+<script type="text/template" id="template_centre_select">
+    <select style="width: 95%;" class="select-centre">
+        <option>Centre</option>
+        <% centres.each(function(centre){ if(centre.get('id') != '0') { %>
+            <option value="<%= centre.get('id') %>"><%= centre.get('name') %></option>
+        <% }}); %>
+    </select>
+</script>
+
+<script type="text/template" id="category-table-display">
+
+<a class="create btn btn-primary btn-xs pull-right" style="margin-top:2px;margin-bottom:2px;">+ Create</a>
+
+<strong>Category</strong>
+
+<table class="slide-panel" style="min-width:490px;">
+<thead>
+<tr>
+<th style="width:80px;">Id</th>
+<th>Name</th>
+<th style="width:80px;">Action</th>
+</tr>
+<thead>
+<tbody>
+<% categories.each(function(category){ if( category.get('name') != 'Shift' && category.get('name') != 'Recurring Shift') {%>
+    <tr><td><%= category.get('id') %></td><td><%= category.get('name') %></td><td><a style="padding: 3px;cursor:pointer" class="tb-inline-tool edit"><span class="glyphicon glyphicon-pencil"></span></a>&nbsp;&nbsp;<a style="padding: 3px;cursor:pointer" class="tb-inline-tool delete"><span class="glyphicon glyphicon-remove"></span></a></td></tr>
+<% }}); %>
+</tbody>
+</table>
+</script>
+
+<script type="text/template" id="template_category_create">
+<div class="alert alert-success" style="display: none;"></div>
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Category Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="name" placeholder="Enter Category name" class="form-control" value="" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Highlight Color</label>
+            <div class="col-sm-9">
+                <input type='color' name='color' placeholder="Select color" class="form-control" value="#FFFFFF" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Paid</label>
+            <div class="col-sm-9">
+                <input type='checkbox' name='paymenttype' placeholder="Select color" class="form-control" style="width:50px;" checked />
+            </div>
+        </div>
+
+    </form>
+</script>
+
+<script type="text/template" id="template_category_edit">
+<div class="alert alert-success" style="display: none;"></div>
+    <form role="form" method="POST" enctype="multipart/form-data" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="name">Category Name</label>
+            <div class="col-sm-9">
+                <input type="text" name="name" placeholder="Enter Category name" class="form-control" value="<%= category.get('name') %>" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Highlight Color</label>
+            <div class="col-sm-9">
+                <input type='color' name='color' placeholder="Select color" class="form-control" value="#<%= category.get('color') %>" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label" for="address">Paid</label>
+            <div class="col-sm-9">
+                <input type='checkbox' name='paymenttype' class="form-control" style="width:50px;"
+                    <%if(Number(category.get('paymenttype'))==1){%>
+                        checked
+                    <%}%>
+                />
+            </div>
+        </div>
+
+    </form>
+</script>
+
+<script type="text/template" id="template_category_delete">
+<div class="alert alert-success" style="display: none;"></div>
+Are you sure, you want to delete this category?
+</script>
+
+<script type="text/template" id="template_category_select">
+    <select style="width: 95%;" class="select-category">
+        <option></option>
+        <% categories.each(function(category){ if(category.get('id') != '1' && category.get('id') != '2') { %>
+            <option value="<%= category.get('id') %>"><%= category.get('name') %></option>
+        <% }}); %>
+    </select>
+</script>
+
+<script type="text/template" id="template_category">
+
+    <% if( paid === '0'|| paid === 0 || !paid) { %>
+        <span class="glyphicon glyphicon-ban-circle" style="float:left;margin-right: -20px;margin-top: 12px;padding-left: 5px;"></span>
+    <% } %>
+    <div style="background-color:#<%= category.get('color') %>" class="content"><%= category.get('name') %>
+    </div>
+</script>
+<script type="text/pemplate" id="fixed-th">
+	<table tabindex="0" class="tg fixed-header">
+        <thead style="border-bottom:1px solid #ccc">
+        		<%=html%>
+        </thead>
+  </table>
+</script>
+<!-- template end -->
+
+
+<!-- ########################################## -->
+<script src='/static/jquery/jquery.js'></script>
+<script type="text/javascript" src="/static/grid/bootstrap/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/static/angular.js"></script>
+<script type="text/javascript" src="/static/grid/jquery.timepicker.js"></script>
+<script type="text/javascript" src="/static/grid/lib/bootstrap-datepicker.js"></script>
+<script type="text/javascript" src="/static/grid/underscore/underscore.js"></script>
+<script type="text/javascript" src="/static/grid/backbone/backbone.js"></script>
+<script type="text/javascript" src="/static/grid/backbone/backbone.bootstrap-modal.js"></script>
+<script type="text/javascript" src="/static/grid/select_n/select2.js"></script>
+<script type="text/javascript" src="/static/grid/moment.min.js"></script>
+<script type="text/javascript" src="/static/grid/jquery_contextmenu/jquery.contextmenu.js"></script>
+<script type="text/javascript" src="/static/grid/event_drag/jquery.event.drag-2.2.js"></script>
+<script type="text/javascript" src="/static/grid/event_drag/jquery.event.drop-2.2.js"></script>
+<!-- ########################################## -->
+
+
+<!-- ################## the application # -->
+<script src="/static/grid/app/model.js"></script>
+<script src="/static/grid/app/collection.js"></script>
+
+<script src="/static/grid/app/views/staff.js"></script>
+<script src="/static/grid/app/views/badges.js"></script>
+<script src="/static/grid/app/views/table.js"></script>
+<script src="/static/grid/app/views/scv.js"></script>
+<script src="/static/grid/app/views/qualification.js"></script>
+<script src="/static/grid/app/views/centre.js"></script>
+<script src="/static/grid/app/views/category.js"></script>
+<script src="/static/grid/app/views/notes.js"></script>
+
+<script src="/static/grid/app/views/tweaks.js"></script>
+<script src="/static/grid/app/views/drawerit.js"></script>
+
+<script type="text/template" id="template_loading"><img src='/static/grid/indicator.gif'></script>
+<script type="application/javascript">
+
+    function startRenderer()
+
+    {
+        if(g_shiftTableView===null)
+        {
+            g_shiftTableView = new ShiftTableView({showDate:g_bs_curDate,staffs:staffs,shifts:shifts});
+            console.log('null table...');
+        }
+        else
+        {
+            g_shiftTableView.remove();
+            $('<div>').addClass('table-wrapper').appendTo('div.table-container');
+            g_shiftTableView = new ShiftTableView({showDate:g_bs_curDate,staffs:staffs,shifts:shifts});
+        }
+
+        g_shiftTableView.render();
+        
+        console.log('table...');
+
+        var curDate = moment(g_bs_curDate).utc();
+        var iStart=-3,iEnd = 3;
+            if(curDate.weekday() >= 4) { iStart=4;iEnd=10; }
+        var startDate = moment(curDate).weekday(iStart);
+        var endDate = moment(curDate).weekday(iEnd);
+        $('h3.week-date-title').show().text(startDate.format('MMM D') + ' - ' + endDate.format('MMM D') +', '+endDate.format('YYYY'));
+    }
+
+    function init(){
+        $('.show-centre').off('click').on('click',function(){
+            $('#centre-wrapper').slideToggle();
+        });
+        window.clearFileInput = function(ctrl) {
+            try {
+            ctrl.value = null;
+            } catch(ex) { }
+                if (ctrl.value) {
+            ctrl.parentNode.replaceChild(ctrl.cloneNode(true), ctrl);
+            }
+        }
+        window.get_badges = function (success,url) {
+            $.get( (url || '/timesheets/badges'), function (data) {
+                window.badges = data.badges;
+                if(success){
+                    success();
+                }
+            });
+        };
+        window.get_badges();
+        window.g_allocate_staff_array = [];
+        window.g_38_roster_day_offset = 0.4;
+        window.g_break_duration = 0.5;
+        window.g_bs_staffs = new Staffs([{"paymenttype": "40", "qualification": "", "id": "151", "badges": "[]", "name": ""}, {"paymenttype": "40", "qualification": "", "id": "156", "badges": "[]", "name": ""}, {"paymenttype": "40", "qualification": "", "id": "148", "badges": "[]", "name": ""}, {"paymenttype": "40", "qualification": "", "id": "150", "badges": "[]", "name": ""}, {"paymenttype": "40", "qualification": "", "id": "129", "badges": "[]", "name": "AddStaffTest AddStaffTestLast"}, {"paymenttype": "40", "qualification": "", "id": "49", "badges": "[]", "name": "Irish Agamao"}, {"paymenttype": "salary", "qualification": "", "id": "54", "badges": "[]", "name": "Jeanette Alexander"}, {"paymenttype": "40", "qualification": "", "id": "91", "badges": "[]", "name": "Aileen An"}, {"paymenttype": "salary", "qualification": "", "id": "37", "badges": "[]", "name": "Natalie Arris"}, {"paymenttype": "40", "qualification": "", "id": "137", "badges": "[]", "name": "Noor Asghar"}, {"paymenttype": "40", "qualification": "", "id": "3", "badges": "[]", "name": "Belinda Bailey"}, {"paymenttype": "40", "qualification": "", "id": "27", "badges": "[]", "name": "Lalita Bajaj"}, {"paymenttype": "40", "qualification": "", "id": "115", "badges": "[]", "name": "Swelha Bandi"}, {"paymenttype": "salary", "qualification": "", "id": "40", "badges": "[]", "name": "Catherine Bell"}, {"paymenttype": "40", "qualification": "", "id": "107", "badges": "[]", "name": "Manuel Benancurt"}, {"paymenttype": "40", "qualification": "", "id": "143", "badges": "[]", "name": "Jess Black"}, {"paymenttype": "40", "qualification": "", "id": "56", "badges": "[]", "name": "Diana Bohorguez"}, {"paymenttype": "40", "qualification": "", "id": "69", "badges": "[]", "name": "Jennifer Brooke-Wood"}, {"paymenttype": "38", "qualification": "", "id": "5", "badges": "[]", "name": "Suzanne Brown"}, {"paymenttype": "38", "qualification": "", "id": "6", "badges": "[]", "name": "Karen Buchan"}, {"paymenttype": "salary", "qualification": "", "id": "7", "badges": "[]", "name": "Juliana Carvalho"}, {"paymenttype": "salary", "qualification": "", "id": "8", "badges": "[]", "name": "Kristy Clifton"}, {"paymenttype": "40", "qualification": "", "id": "42", "badges": "[]", "name": "Lily Crichton"}, {"paymenttype": "salary", "qualification": "", "id": "74", "badges": "[]", "name": "George Davos"}, {"paymenttype": "38", "qualification": "", "id": "79", "badges": "[]", "name": "Simone Di Benedetto"}, {"paymenttype": "40", "qualification": "", "id": "51", "badges": "[]", "name": "Phoebe Dowse- Jones"}, {"paymenttype": "salary", "qualification": "", "id": "130", "badges": "[]", "name": "Rita Falzon"}, {"paymenttype": "salary", "qualification": "", "id": "9", "badges": "[]", "name": "Elyse Ferguson"}, {"paymenttype": "salary", "qualification": "", "id": "32", "badges": "[]", "name": "Gaston Fernandez"}, {"paymenttype": "40", "qualification": "", "id": "144", "badges": "[]", "name": "Edyta Flores"}, {"paymenttype": "40", "qualification": "", "id": "125", "badges": "[]", "name": "Whitney Frantzis"}, {"paymenttype": "40", "qualification": "", "id": "43", "badges": "[]", "name": "Michella Gander"}, {"paymenttype": "40", "qualification": "", "id": "112", "badges": "[]", "name": "Daphne Gehrels"}, {"paymenttype": "salary", "qualification": "", "id": "10", "badges": "[]", "name": "Fernanda Goncalves"}, {"paymenttype": "40", "qualification": "", "id": "152", "badges": "[]", "name": "Keira Goodfellow"}, {"paymenttype": "40", "qualification": "", "id": "122", "badges": "[]", "name": "Rachel Grasso"}, {"paymenttype": "40", "qualification": "", "id": "123", "badges": "[]", "name": "Rachel Grasso"}, {"paymenttype": "40", "qualification": "", "id": "126", "badges": "[]", "name": "Emily Gustafson"}, {"paymenttype": "salary", "qualification": "", "id": "97", "badges": "[]", "name": "Kelly Hallas"}, {"paymenttype": "salary", "qualification": "", "id": "1", "badges": "[]", "name": "Nick Harasym"}, {"paymenttype": "40", "qualification": "", "id": "11", "badges": "[]", "name": "Judith Eleanor Hogan"}, {"paymenttype": "40", "qualification": "", "id": "138", "badges": "[]", "name": "Megha Janardhan"}, {"paymenttype": "salary", "qualification": "", "id": "92", "badges": "[]", "name": "Christ Kanellopoulos"}, {"paymenttype": "40", "qualification": "", "id": "57", "badges": "[]", "name": "Kamila Kantorska"}, {"paymenttype": "38", "qualification": "", "id": "34", "badges": "[]", "name": "Albertine Kay Hopkirk"}, {"paymenttype": "salary", "qualification": "", "id": "50", "badges": "[]", "name": "Georgia Kelly"}, {"paymenttype": "38", "qualification": "", "id": "78", "badges": "[]", "name": "Chaehoe Kim"}, {"paymenttype": "40", "qualification": "", "id": "95", "badges": "[]", "name": "Jarod Kingston-Brown"}, {"paymenttype": "salary", "qualification": "", "id": "12", "badges": "[]", "name": "Aaron Knox"}, {"paymenttype": "salary", "qualification": "", "id": "13", "badges": "[]", "name": "George Kolistasi"}, {"paymenttype": "salary", "qualification": "", "id": "14", "badges": "[]", "name": "Drahomira Kounovska"}, {"paymenttype": "salary", "qualification": "", "id": "149", "badges": "[]", "name": "First Last"}, {"paymenttype": "salary", "qualification": "", "id": "116", "badges": "[]", "name": "Brooke Leonard"}, {"paymenttype": "salary", "qualification": "", "id": "15", "badges": "[]", "name": "Izabela Lisiecka"}, {"paymenttype": "salary", "qualification": "", "id": "23", "badges": "[]", "name": "Shanshan Long"}, {"paymenttype": "salary", "qualification": "", "id": "47", "badges": "[]", "name": "John Lyons"}, {"paymenttype": "40", "qualification": "", "id": "39", "badges": "[]", "name": "Katholiki Manoleskos"}, {"paymenttype": "40", "qualification": "", "id": "117", "badges": "[]", "name": "Sabina Mazumder"}, {"paymenttype": "40", "qualification": "", "id": "141", "badges": "[]", "name": "blahblah McBlah"}, {"paymenttype": "40", "qualification": "", "id": "29", "badges": "[]", "name": "Jodie McGoldrick"}, {"paymenttype": "40", "qualification": "", "id": "140", "badges": "[]", "name": "testy McTest"}, {"paymenttype": "salary", "qualification": "", "id": "24", "badges": "[]", "name": "Dimitra Mihas"}, {"paymenttype": "salary", "qualification": "", "id": "16", "badges": "[]", "name": "Alana Montefiore"}, {"paymenttype": "40", "qualification": "", "id": "58", "badges": "[]", "name": "Amar Morabe"}, {"paymenttype": "40", "qualification": "", "id": "59", "badges": "[]", "name": "Jackie Napiza"}, {"paymenttype": "40", "qualification": "", "id": "111", "badges": "[]", "name": "Susanti Ng"}, {"paymenttype": "38", "qualification": "", "id": "80", "badges": "[]", "name": "Carol O'Sullivan"}, {"paymenttype": "40", "qualification": "", "id": "19", "badges": "[]", "name": "Melisa Perdija"}, {"paymenttype": "40", "qualification": "", "id": "21", "badges": "[]", "name": "Laura Porto"}, {"paymenttype": "40", "qualification": "", "id": "113", "badges": "[]", "name": "Kathrina Primero"}, {"paymenttype": "salary", "qualification": "", "id": "25", "badges": "[]", "name": "Cristiane Recchia"}, {"paymenttype": "salary", "qualification": "", "id": "22", "badges": "[]", "name": "Julie Ritzau"}, {"paymenttype": "40", "qualification": "", "id": "132", "badges": "[]", "name": "Pilar Rodriguez"}, {"paymenttype": "40", "qualification": "", "id": "131", "badges": "[]", "name": "Pilar Rodriguez Londono"}, {"paymenttype": "salary", "qualification": "", "id": "60", "badges": "[]", "name": "Anita Rosales"}, {"paymenttype": "40", "qualification": "", "id": "134", "badges": "[]", "name": "Celia Schafer-Wilson"}, {"paymenttype": "40", "qualification": "", "id": "136", "badges": "[]", "name": "Stephanie Schell"}, {"paymenttype": "salary", "qualification": "", "id": "28", "badges": "[]", "name": "Aiko Shiga"}, {"paymenttype": "40", "qualification": "", "id": "61", "badges": "[]", "name": "Harpinder  Sidhu"}, {"paymenttype": "40", "qualification": "", "id": "127", "badges": "[]", "name": "Mathuros(Kim) Srisansuneeyawong"}, {"paymenttype": "salary", "qualification": "", "id": "55", "badges": "[]", "name": "Jeananne Stack"}, {"paymenttype": "salary", "qualification": "", "id": "31", "badges": "[]", "name": "Laura Suarez Neira"}, {"paymenttype": "40", "qualification": "", "id": "128", "badges": "[]", "name": "GK Test Surname"}, {"paymenttype": "40", "qualification": "", "id": "154", "badges": "[]", "name": "Christian Tagle"}, {"paymenttype": "salary", "qualification": "", "id": "93", "badges": "[]", "name": "test test"}, {"paymenttype": "40", "qualification": "", "id": "106", "badges": "[]", "name": "test test"}, {"paymenttype": "40", "qualification": "", "id": "139", "badges": "[]", "name": "test f1 test l1"}, {"paymenttype": "40", "qualification": "", "id": "142", "badges": "[]", "name": "test2 f1 test2 l1"}, {"paymenttype": "40", "qualification": "", "id": "114", "badges": "[]", "name": "Ngaire Toomaga"}, {"paymenttype": "40", "qualification": "", "id": "45", "badges": "[]", "name": "Elizabeth Toomey"}, {"paymenttype": "40", "qualification": "", "id": "133", "badges": "[]", "name": "Rebecca Tovey"}, {"paymenttype": "40", "qualification": "", "id": "118", "badges": "[]", "name": "Yuko Uchida"}, {"paymenttype": "40", "qualification": "", "id": "38", "badges": "[]", "name": "Kevin Van Dung Dang"}, {"paymenttype": "40", "qualification": "", "id": "135", "badges": "[]", "name": "Adriana Willers"}, {"paymenttype": "40", "qualification": "", "id": "145", "badges": "[]", "name": "Adriana Willers"}]);
+        window.g_bs_shifts = new Shifts([{'staff_name': 'Daphne Gehrels', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3395', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-09', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3404', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-10', 'end_time': '05:00 PM', 'location': '2'}, {'staff_name': 'Daphne Gehrels', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3414', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-09', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Daphne Gehrels', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3415', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-14', 'end_time': '06:00 PM', 'location': '4'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 5, 'id': '3417', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-09', 'end_time': '06:00 PM', 'location': '6'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3418', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-10', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Noor Asghar', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3420', 'staff_id': '137', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-09', 'end_time': '06:00 PM', 'location': '5'}, {'staff_name': 'Noor Asghar', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3422', 'staff_id': '137', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-13', 'end_time': '06:00 PM', 'location': '2'}, {'staff_name': 'Gaston Fernandez', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3425', 'staff_id': '32', 'allDay': 'true', 'title': '', 'colour': 'red', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '5'}, {'staff_name': 'Laura Suarez Neira', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3429', 'staff_id': '31', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-13', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'Keira Goodfellow', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3431', 'staff_id': '152', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'Jeanette Alexander', 'type_id': '1', 'start_time': '07:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3434', 'staff_id': '54', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-09', 'end_time': '03:00 PM', 'location': '2'}, {'staff_name': 'Daphne Gehrels', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3461', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-09', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3463', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-10', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Daphne Gehrels', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3464', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-14', 'end_time': '06:00 PM', 'location': '4'}, {'staff_name': 'Daphne Gehrels', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3465', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '2'}, {'staff_name': 'Daphne Gehrels', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3466', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-09', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Daphne Gehrels', 'type_id': '5', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3467', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-15', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3468', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-09', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3469', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-10', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Daphne Gehrels', 'type_id': '4', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3470', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-13', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Noor Asghar', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3471', 'staff_id': '137', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-13', 'end_time': '06:00 PM', 'location': '2'}, {'staff_name': 'Noor Asghar', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3472', 'staff_id': '137', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-09', 'end_time': '06:00 PM', 'location': '5'}, {'staff_name': 'Noor Asghar', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3473', 'staff_id': '137', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-15', 'end_time': '06:00 PM', 'location': '3'}, {'staff_name': 'Gaston Fernandez', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3474', 'staff_id': '32', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '5'}, {'staff_name': 'Keira Goodfellow', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3475', 'staff_id': '152', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '15'}, {'staff_name': 'Keira Goodfellow', 'type_id': '12', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3477', 'staff_id': '152', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-14', 'end_time': '04:00 PM', 'location': '1'}, {'staff_name': 'Laura Suarez Neira', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3478', 'staff_id': '31', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-13', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'Laura Suarez Neira', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3479', 'staff_id': '31', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'Keira Goodfellow', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3480', 'staff_id': '152', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'Keira Goodfellow', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3481', 'staff_id': '152', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-13', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'Jeanette Alexander', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3482', 'staff_id': '54', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-09', 'end_time': '02:00 PM', 'location': '4'}, {'staff_name': 'Daphne Gehrels', 'type_id': '5', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3486', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-15', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Laura Suarez Neira', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3487', 'staff_id': '31', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-14', 'end_time': '04:00 PM', 'location': '1'}, {'staff_name': 'Daphne Gehrels', 'type_id': '5', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3488', 'staff_id': '112', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-15', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Keira Goodfellow', 'type_id': '12', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3489', 'staff_id': '152', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-14', 'end_time': '04:00 PM', 'location': '1'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3495', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-13', 'end_time': '06:00 PM', 'location': '2'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3496', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-14', 'end_time': '06:00 PM', 'location': '5'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3499', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-09', 'end_time': '06:00 PM', 'location': '2'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3500', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-13', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3501', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-14', 'end_time': '06:00 PM', 'location': '1'}, {'staff_name': 'AddStaffTest AddStaffTestLast', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3502', 'staff_id': '129', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-15', 'end_time': '06:00 PM', 'location': '5'}, {'staff_name': 'Jeanette Alexander', 'type_id': '9', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3503', 'staff_id': '54', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-13', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Jeanette Alexander', 'type_id': '3', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3504', 'staff_id': '54', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-14', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Jeanette Alexander', 'type_id': '3', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3505', 'staff_id': '54', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-15', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Jeanette Alexander', 'type_id': '9', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3506', 'staff_id': '54', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Noor Asghar', 'type_id': '7', 'start_time': '09:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3507', 'staff_id': '137', 'allDay': 'true', 'title': '', 'colour': 'None', 'day': '2015-04-14', 'end_time': '05:00 PM', 'location': '1'}, {'staff_name': 'Noor Asghar', 'type_id': '1', 'start_time': '08:00 AM', '_end_time': '06:00 PM', 'paid': '1', '_start_time': '08:00 AM', 'threshold': 15, 'id': '3508', 'staff_id': '137', 'allDay': 'true', 'title': '', 'colour': '', 'day': '2015-04-10', 'end_time': '06:00 PM', 'location': '4'}]);
+        window.g_bs_categories = new Categories([{'color': 'cdebfc', 'paymenttype': '1', 'id': '1', 'name': 'Base Hourly'}, {'color': 'ffff80', 'paymenttype': '1', 'id': '2', 'name': 'Recurring Shift'}, {'color': '008000', 'paymenttype': '1', 'id': '3', 'name': 'Holiday Leave'}, {'color': 'ffecec', 'paymenttype': '1', 'id': '4', 'name': 'Personal Leave Paid'}, {'color': '8000ff', 'paymenttype': '1', 'id': '5', 'name': 'Long Service Leave'}, {'color': 'f7fac9', 'paymenttype': '1', 'id': '6', 'name': 'Rostered Day Off'}, {'color': '00f907', 'paymenttype': '1', 'id': '7', 'name': 'asdaserte'}, {'color': 'ff80c0', 'paymenttype': '1', 'id': '8', 'name': 'Agency '}, {'color': 'ffffff', 'paymenttype': '1', 'id': '9', 'name': 'Test1'}, {'color': 'ffffff', 'paymenttype': '1', 'id': '10', 'name': 'Test cat'}, {'color': 'e4dadb', 'paymenttype': '1', 'id': '11', 'name': 'Public Holiday'}, {'color': 'ffffff', 'paymenttype': '1', 'id': '12', 'name': 'Annual Leave'}, {'color': 'c4ffe1', 'paymenttype': '1', 'id': '13', 'name': 'Hourly Holiday Pay'}, {'color': 'e453e8', 'paymenttype': '0', 'id': '14', 'name': 'Personal Leave (Unpaid)'}, {'color': 'ffffff', 'paymenttype': '1', 'id': '15', 'name': 'Leave(Unpaid)'}, {'color': 'ff0080', 'paymenttype': '0', 'id': '16', 'name': 'Leave(Unpaid)'}, {'color': 'f53636', 'paymenttype': '1', 'id': '17', 'name': 'a category'}, {'color': 'ffffff', 'paymenttype': '1', 'id': '22', 'name': 'Test'}, {'color': 'ffffff', 'paymenttype': '1', 'id': '23', 'name': 'Test'}, {'color': 'ffffff', 'paymenttype': '0', 'id': '24', 'name': 'Paid'}, {'color': 'ff0000', 'paymenttype': '0', 'id': '25', 'name': 'UNPAID'}]);
+        window.g_bs_centres = new Centres([{'threshold': '15', 'phone': '0293113522', 'address': '419A Beauchamp Road Maroubra', 'id': '1', 'name': 'Eastlakes'}, {'threshold': '15', 'phone': '0293113522', 'address': '419A Beauchamp Road Maroubra', 'id': '2', 'name': 'Duffys  '}, {'threshold': '15', 'phone': '0299298098', 'address': '3 Rodborough Road Crows Nest', 'id': '4', 'name': 'Crows Nest'}, {'threshold': '15', 'phone': '0296695444', 'address': '5-13 Rosebery Avenue Rosebery', 'id': '5', 'name': 'Parklane'}, {'threshold': '5', 'phone': '0285829007', 'address': '5-13 Rosebery Avenue Rosebery', 'id': '6', 'name': 'Troppo '}, {'threshold': '15', 'phone': '0296670888', 'address': '5-13 Rosebery Avenue Rosebery', 'id': '7', 'name': 'Managesource'}, {'threshold': '15', 'phone': '0296696090', 'address': '4 Florence Avenue Eastlakes', 'id': '8', 'name': 'OSHC'}, {'threshold': '0', 'phone': '', 'address': '', 'id': '9', 'name': 'Test1'}, {'threshold': '0', 'phone': '', 'address': '', 'id': '10', 'name': 'Test'}, {'threshold': '15', 'phone': '0344534', 'address': '23 Troppe st', 'id': '11', 'name': 'Troppo'}, {'threshold': '0', 'phone': '', 'address': '', 'id': '12', 'name': 'a'}, {'threshold': '0', 'phone': '2345678901', 'address': 'a1', 'id': '13', 'name': 'a1'}, {'threshold': '0', 'phone': '6465754665', 'address': 'moo', 'id': '14', 'name': 'Nick Harasym'}, {'threshold': '15', 'phone': '', 'address': '', 'id': '15', 'name': 'NEO Networks '}, {'threshold': '0', 'phone': 'test', 'address': 'Test', 'id': '16', 'name': 'Test'}, {'threshold': '0', 'phone': '0451043434', 'address': 'an adress', 'id': '19', 'name': 'a centre'}]);
+        window.g_bs_quals = new UQuals([]);
+        window.g_bs_curDate = 1428537600000;
+        window.g_start_time = '8:00 am';
+        window.g_end_time = '6:00 pm';
+        window.g_copy = 0;
+        //Break duration in terms of hours
+        window.g_break_threshold = 6;
+        window.g_break_duration = 0.5;
+        window.staffs = g_bs_staffs;
+        window.shifts = g_bs_shifts;
+        window.categories = g_bs_categories;
+        window.centres = g_bs_centres;
+        window.quals = g_bs_quals;
+        window.centre_id = '0';
+        window.g_shiftTableView=null;
+        window.g_prev_week = 1428536995200;
+        window.g_next_week = 1428538204800;
+        var retArray = [];
+        retArray.push({id:'0',text:'Centre'});
+
+        centres.each(function(centre){
+            retArray.push({id:centre.get('id'),text:centre.get('name')});
+        });
+
+        $('.select-centre')
+            .val(centre_id)
+            .select2({placeholder:"Select Centre",data:retArray
+            }).on('change',function(ev){
+                    var curDisplayDate = $('#grid-effective-date').data('datepicker').date;
+                    location.href = location.protocol + '//' + location.host + location.pathname + '?year='+curDisplayDate.getFullYear()+'&month='+(curDisplayDate.getMonth()+1)+'&day='+curDisplayDate.getDate() + '&centre='+ev.val;
+                });
+
+        g_centreView = new CentreView();
+        g_qualView = new QualView();
+        g_centreView.render();
+        g_qualView.render();
+        g_csvExportView = new CsvExportView();
+        g_csvExportView.render();
+        g_categoryView = new CategoryView();
+        g_categoryView.render();
+    }
+
+    $(function(){
+        init();
+        startRenderer();
+    });
+
+    
+
+</script>
+
+
+<script src="/static/grid/app/views/datepicker.js"></script>
+<!-- ################## end application # -->
+
+</body>
+</html>
+
